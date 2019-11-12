@@ -4,7 +4,7 @@ import { Subscription } from 'rxjs';
 
 import { Product } from '../product';
 import { ProductService } from '../product.service';
-import { Store } from '@ngrx/store';
+import { Store, select } from '@ngrx/store';
 
 @Component({
   selector: 'pm-product-list',
@@ -36,12 +36,22 @@ export class ProductListComponent implements OnInit, OnDestroy {
       next: (products: Product[]) => this.products = products,
       error: (err: any) => this.errorMessage = err.error
     });
+
+    this.store.pipe(select('products')).subscribe(
+      // entire product slice from store is received
+      products => {
+        if (products) {
+          this.displayCode = products.showProductCode;
+        }
+      }
+    )
   }
 
   ngOnDestroy(): void {
     this.sub.unsubscribe();
   }
 
+  // Each time the user clicks the checkbox the action is dispatched, the reducer is executed and the exisiting store state is updated with new one
   checkChanged(value: boolean): void {
     this.store.dispatch({
       type: 'TOGGLE_PRODUCT_CODE',
