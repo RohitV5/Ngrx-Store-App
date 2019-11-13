@@ -1,34 +1,44 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  Input,
+  EventEmitter,
+  Output,
+  OnChanges,
+  SimpleChanges
+} from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 
-import { Subscription } from 'rxjs';
-
-import { Product } from '../product';
-import { ProductService } from '../product.service';
-import { GenericValidator } from '../../shared/generic-validator';
-import { NumberValidators } from '../../shared/number.validator';
+import { Product } from '../../product';
+import { GenericValidator } from '../../../shared/generic-validator';
+import { NumberValidators } from '../../../shared/number.validator';
 
 @Component({
   selector: 'pm-product-edit',
   templateUrl: './product-edit.component.html',
   styleUrls: ['./product-edit.component.css']
 })
-export class ProductEditComponent implements OnInit, OnDestroy {
+export class ProductEditComponent implements OnInit, OnChanges, OnDestroy {
   pageTitle = 'Product Edit';
-  errorMessage = '';
+  @Input() errorMessage: string;
+  @Input() selectedProduct: Product;
+  @Output() create = new EventEmitter<Product>();
+  @Output() update = new EventEmitter<Product>();
+  @Output() delete = new EventEmitter<Product>();
+  @Output() clearCurrent = new EventEmitter<void>();
+
+  componentActive = true;
   productForm: FormGroup;
 
   product: Product | null;
-  sub: Subscription;
 
   // Use with the generic validation message class
   displayMessage: { [key: string]: string } = {};
   private validationMessages: { [key: string]: { [key: string]: string } };
   private genericValidator: GenericValidator;
 
-  constructor(private fb: FormBuilder,
-              private productService: ProductService) {
-
+  constructor(private fb: FormBuilder) {
     // Defines all of the validation messages for the form.
     // These could instead be retrieved from a file or database.
     this.validationMessages = {
@@ -61,19 +71,23 @@ export class ProductEditComponent implements OnInit, OnDestroy {
       description: ''
     });
 
-    // Watch for changes to the currently selected product
-    this.sub = this.productService.selectedProductChanges$.subscribe(
-      selectedProduct => this.displayProduct(selectedProduct)
-    );
-
     // Watch for value changes
     this.productForm.valueChanges.subscribe(
       value => this.displayMessage = this.genericValidator.processMessages(this.productForm)
     );
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+
+    // patch form with value from the store
+    if (changes.selectedProduct) {
+      const product: any = changes.selectedProduct.currentValue as Product;
+      this.displayProduct(product);
+    }
+  }
+
   ngOnDestroy(): void {
-    this.sub.unsubscribe();
+    this.componentActive = false;
   }
 
   // Also validate on blur
@@ -86,7 +100,7 @@ export class ProductEditComponent implements OnInit, OnDestroy {
     // Set the local product property
     this.product = product;
 
-    if (this.product) {
+    if (this.product && this.productForm) {
       // Reset the form back to pristine
       this.productForm.reset();
 
@@ -116,14 +130,11 @@ export class ProductEditComponent implements OnInit, OnDestroy {
   deleteProduct(): void {
     if (this.product && this.product.id) {
       if (confirm(`Really delete the product: ${this.product.productName}?`)) {
-        this.productService.deleteProduct(this.product.id).subscribe({
-          next: () => this.productService.changeSelectedProduct(null),
-          error: err => this.errorMessage = err.error
-        });
+        this.delete.emit(this.product);
       }
     } else {
       // No need to delete, it was never saved
-      this.productService.changeSelectedProduct(null);
+      this.clearCurrent.emit();
     }
   }
 
@@ -136,15 +147,9 @@ export class ProductEditComponent implements OnInit, OnDestroy {
         const p = { ...this.product, ...this.productForm.value };
 
         if (p.id === 0) {
-          this.productService.createProduct(p).subscribe({
-            next: product => this.productService.changeSelectedProduct(product),
-            error: err => this.errorMessage = err.error
-          });
+          this.create.emit(p);
         } else {
-          this.productService.updateProduct(p).subscribe({
-            next: product => this.productService.changeSelectedProduct(product),
-            error: err => this.errorMessage = err.error
-          });
+          this.update.emit(p);
         }
       }
     } else {

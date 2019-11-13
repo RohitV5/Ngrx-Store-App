@@ -7,8 +7,6 @@ import { HttpClientInMemoryWebApiModule } from 'angular-in-memory-web-api';
 import { ProductData } from './products/product-data';
 
 import { AppRoutingModule } from './app-routing.module';
-import { StoreModule } from '@ngrx/store'
-import { StoreDevtoolsModule } from '@ngrx/store-devtools'
 
 import { AppComponent } from './app.component';
 import { ShellComponent } from './home/shell.component';
@@ -18,7 +16,12 @@ import { PageNotFoundComponent } from './home/page-not-found.component';
 
 /* Feature Modules */
 import { UserModule } from './user/user.module';
-import { environment } from 'src/environments/environment';
+
+/* NgRx */
+import { StoreModule } from '@ngrx/store';
+import { StoreDevtoolsModule } from '@ngrx/store-devtools';
+import { environment } from '../environments/environment';
+import { EffectsModule } from '@ngrx/effects';
 
 @NgModule({
   imports: [
@@ -28,12 +31,21 @@ import { environment } from 'src/environments/environment';
     UserModule,
     AppRoutingModule,
     StoreModule.forRoot({}),
-    // Initializing Empty Store {}
+    // StoreModule.forRoot({},
+    //   {
+    //     runtimeChecks: {
+    //       strictStateImmutability: true,
+    //       strictActionImmutability: true,
+    //       strictStateSerializability: true,
+    //       strictActionSerializability: true
+    //     }
+    //   }),
     StoreDevtoolsModule.instrument({
-      name: 'APM Demo App Devtools',
+      name: 'APM Demo App DevTools',
       maxAge: 25,
-      logOnly: environment.production
-    })
+      logOnly: environment.production,
+    }),
+    EffectsModule.forRoot([])
   ],
   declarations: [
     AppComponent,
